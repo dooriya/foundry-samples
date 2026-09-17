@@ -13,11 +13,25 @@ MARKDOWN_REPORT_NAME = "report.md"
 
 _RESULT_LABELS = {
     "pass": "Supported",
-    "fail": "Failed validation",
+    "fail": "Not verified",
     "unsupported": "Unsupported",
     "not_applicable": "Not applicable",
     "skipped": "Not tested",
-    "inconclusive": "Inconclusive",
+    "inconclusive": "Not verified",
+}
+
+_RESULT_DESCRIPTIONS = {
+    "Supported": "the request and capability-specific validation succeeded.",
+    "Unsupported": (
+        "the service explicitly rejected the capability, or a controlled probe completed "
+        "without observing the required behavior."
+    ),
+    "Not verified": (
+        "the probe did not obtain enough evidence to confirm support. This does not mean the "
+        "service explicitly rejected the capability."
+    ),
+    "Not tested": "the scenario was not selected for this run.",
+    "Not applicable": "the capability does not apply to the selected target.",
 }
 
 
@@ -66,23 +80,12 @@ def _markdown_report(document: dict[str, Any]) -> str:
             f"{scenario['durationMs']} ms |"
         )
 
-    lines.extend(
-        [
-            "",
-            "## Result meanings",
-            "",
-            "- **Supported**: the request and capability-specific validation succeeded.",
-            "- **Unsupported**: the service explicitly rejected the capability as unsupported.",
-            "- **Failed validation**: the observed behavior did not satisfy the probe; this does "
-            "not by itself prove the capability is unsupported.",
-            "- **Inconclusive**: the available evidence could not prove support or failure.",
-            "- **Not tested**: the scenario was not selected for this run.",
-            "- **Not applicable**: the capability does not apply to the selected target.",
-            "",
-            "## Observations",
-            "",
-        ]
-    )
+    observed_results = {_display_result(scenario["status"]) for scenario in document["scenarios"]}
+    lines.extend(["", "## Result meanings", ""])
+    for result, description in _RESULT_DESCRIPTIONS.items():
+        if result in observed_results:
+            lines.append(f"- **{result}**: {description}")
+    lines.extend(["", "## Observations", ""])
     for scenario in document["scenarios"]:
         lines.extend(
             [

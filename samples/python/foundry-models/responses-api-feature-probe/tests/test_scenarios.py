@@ -164,6 +164,48 @@ def test_parallel_tools_count_three_distinct_calls_and_use_non_strict_schemas() 
     assert result.evidence["returnedFunctionCallCount"] == 3
 
 
+def test_parallel_tools_retry_until_multiple_distinct_calls_are_observed() -> None:
+    single_call = SimpleNamespace(
+        output=[SimpleNamespace(type="function_call", name="get_temperature", call_id="call-1")]
+    )
+    two_calls = SimpleNamespace(
+        output=[
+            SimpleNamespace(type="function_call", name=name, call_id=f"call-{index}")
+            for index, name in enumerate(("get_temperature", "get_humidity"), start=2)
+        ]
+    )
+    scenario_context = context(single_call, two_calls)
+
+    result = ParallelToolCallsScenario().run(scenario_context)
+
+    assert result.status is Status.PASS
+    assert result.evidence["outcome"] == "multiple_distinct_calls_observed"
+    assert result.evidence["attemptsCompleted"] == 2
+    assert result.evidence["distinctRequestedFunctionsObserved"] == 2
+
+
+def test_parallel_tools_are_unsupported_when_only_one_call_is_observed() -> None:
+    responses = [
+        SimpleNamespace(
+            output=[
+                SimpleNamespace(
+                    type="function_call",
+                    name="get_temperature",
+                    call_id=f"call-{index}",
+                )
+            ]
+        )
+        for index in range(3)
+    ]
+
+    result = ParallelToolCallsScenario().run(context(*responses))
+
+    assert result.status is Status.UNSUPPORTED
+    assert result.evidence["outcome"] == "multiple_distinct_calls_not_observed"
+    assert result.evidence["attemptsCompleted"] == 3
+    assert result.evidence["distinctRequestedFunctionsObserved"] == 1
+
+
 def test_structured_output_is_locally_validated() -> None:
     payload = {
         "capability": "structured_output",
@@ -236,19 +278,35 @@ def test_prompt_cache_passes_only_for_positive_cached_tokens() -> None:
     assert result.status is Status.PASS
     assert result.evidence["cachedTokens"] == 1024
     assert result.evidence["stablePrefixWords"] > 1024
+    assert result.evidence["cachedTokensByRequest"] == [None, 1024]
     assert len(scenario_context.client.responses.calls) == 2
+    assert len({call["input"] for call in scenario_context.client.responses.calls}) == 1
+    assert all(call["max_output_tokens"] == 16 for call in scenario_context.client.responses.calls)
 
 
-def test_prompt_cache_zero_is_inconclusive_not_unsupported_or_pass() -> None:
-    first = SimpleNamespace(usage=None)
-    second = SimpleNamespace(
-        usage=SimpleNamespace(input_tokens_details=SimpleNamespace(cached_tokens=0))
-    )
+def test_prompt_cache_zero_is_unsupported_after_controlled_retries() -> None:
+    responses = [
+        SimpleNamespace(
+            usage=SimpleNamespace(input_tokens_details=SimpleNamespace(cached_tokens=0))
+        )
+        for _ in range(4)
+    ]
 
-    result = PromptCacheScenario().run(context(first, second))
+    result = PromptCacheScenario().run(context(*responses))
 
-    assert result.status is Status.INCONCLUSIVE
-    assert result.evidence["outcome"] == "cached_token_metric_zero"
+    assert result.status is Status.UNSUPPORTED
+    assert result.evidence["outcome"] == "cached_tokens_not_observed_after_retries"
+    assert result.evidence["requestsCompleted"] == 4
+    assert result.evidence["cachedTokensByRequest"] == [0, 0, 0, 0]
+
+
+def test_prompt_cache_missing_metric_is_unsupported_after_controlled_retries() -> None:
+    result = PromptCacheScenario().run(context(*(SimpleNamespace(usage=None) for _ in range(4))))
+
+    assert result.status is Status.UNSUPPORTED
+    assert result.evidence["outcome"] == "cached_token_metric_unavailable"
+    assert result.evidence["cachedTokenMetricPresent"] is False
+    assert result.evidence["requestsCompleted"] == 4
 
 
 def test_prompt_cache_negative_metric_fails_validation() -> None:

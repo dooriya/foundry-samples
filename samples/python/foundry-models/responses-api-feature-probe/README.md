@@ -74,8 +74,8 @@ The run writes:
 - `reports/results.json`: versioned machine-readable results
 - `reports/report.md`: a readable summary
 
-Running the probe is an explicit live-test opt-in. A full run makes ten model requests and can
-incur Azure usage charges. To list scenarios or run a lower-cost subset:
+Running the probe is an explicit live-test opt-in. A full run makes up to 14 model requests and
+can incur Azure usage charges. To list scenarios or run a lower-cost subset:
 
 ```console
 python -m foundry_responses_feature_probe --list-scenarios
@@ -88,13 +88,15 @@ The probe covers non-streaming and streaming responses, single and parallel func
 structured output, reasoning effort, prompt-cache reporting, and a deterministic 32x32 solid-black
 vision input.
 
-Capability support depends on the deployment, model, region, and configuration. An
-`inconclusive` result is retained when the evidence cannot prove support or failure.
+Capability support depends on the deployment, model, region, and configuration. The human-readable
+report uses **Supported**, **Unsupported**, and **Not verified**. Unsupported is reserved for an
+explicit service rejection or a completed controlled probe that did not observe the required
+behavior. Not verified is reserved for cases where the probe itself could not complete reliably.
 
-The human-readable report uses **Supported**, **Unsupported**, **Failed validation**, and
-**Inconclusive**. A failed validation means the observed response did not satisfy that probe; it
-does not automatically mean the service explicitly rejected the capability. The JSON report keeps
-the versioned machine status contract for automation.
+The parallel-tool probe makes up to three attempts and passes when at least two distinct tool calls
+appear in one response. The prompt-cache probe makes up to four identical requests and passes only
+after observing a positive `cached_tokens` value. The JSON report keeps the versioned machine
+status contract for automation.
 
 ## Authentication and safety
 

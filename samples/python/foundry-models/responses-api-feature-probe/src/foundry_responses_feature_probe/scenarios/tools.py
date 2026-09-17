@@ -110,6 +110,7 @@ class SingleToolCallScenario:
 class ParallelToolCallsScenario:
     capability_id = "parallel_tool_calls"
     name = "Parallel tool calls"
+    max_attempts = 3
 
     def run(self, context: ScenarioContext) -> ScenarioObservation:
         expected_names = {
@@ -117,44 +118,70 @@ class ParallelToolCallsScenario:
             "get_humidity",
             "get_wind_speed",
         }
-        response = context.client.responses.create(
-            model=context.model,
-            input=(
-                "For Seattle, call all three independent functions exactly once: "
-                "get_temperature, get_humidity, and get_wind_speed. "
-                "Do not answer without all three calls."
-            ),
-            tools=[
-                _location_tool(
-                    "get_temperature",
-                    "Return temperature for a location.",
-                    strict=False,
+        max_returned = 0
+        max_distinct_requested = 0
+        max_unexpected = 0
+        attempts_completed = 0
+
+        for _ in range(self.max_attempts):
+            response = context.client.responses.create(
+                model=context.model,
+                input=(
+                    "For Seattle, call all three independent functions exactly once: "
+                    "get_temperature, get_humidity, and get_wind_speed. "
+                    "Return all required function calls in the same response."
                 ),
-                _location_tool(
-                    "get_humidity",
-                    "Return humidity for a location.",
-                    strict=False,
-                ),
-                _location_tool(
-                    "get_wind_speed",
-                    "Return wind speed for a location.",
-                    strict=False,
-                ),
-            ],
-            tool_choice="required",
-            parallel_tool_calls=True,
-        )
-        calls = function_calls(response)
-        observed_names = [get_field(call, "name", "") for call in calls]
-        passed = len(calls) == 3 and set(observed_names) == expected_names
+                tools=[
+                    _location_tool(
+                        "get_temperature",
+                        "Return temperature for a location.",
+                        strict=False,
+                    ),
+                    _location_tool(
+                        "get_humidity",
+                        "Return humidity for a location.",
+                        strict=False,
+                    ),
+                    _location_tool(
+                        "get_wind_speed",
+                        "Return wind speed for a location.",
+                        strict=False,
+                    ),
+                ],
+                tool_choice="required",
+                parallel_tool_calls=True,
+            )
+            attempts_completed += 1
+            calls = function_calls(response)
+            observed_names = [get_field(call, "name", "") for call in calls]
+            distinct_requested = len(set(observed_names) & expected_names)
+            unexpected = len([name for name in observed_names if name not in expected_names])
+            max_returned = max(max_returned, len(calls))
+            max_distinct_requested = max(max_distinct_requested, distinct_requested)
+            max_unexpected = max(max_unexpected, unexpected)
+            if distinct_requested >= 2 and unexpected == 0:
+                return ScenarioObservation(
+                    status=Status.PASS,
+                    evidence={
+                        "outcome": "multiple_distinct_calls_observed",
+                        "attemptsCompleted": attempts_completed,
+                        "maximumAttempts": self.max_attempts,
+                        "requestedFunctionCount": 3,
+                        "returnedFunctionCallCount": max_returned,
+                        "distinctRequestedFunctionsObserved": max_distinct_requested,
+                        "unexpectedFunctionCallCount": max_unexpected,
+                    },
+                )
+
         return ScenarioObservation(
-            status=Status.PASS if passed else Status.FAIL,
+            status=Status.UNSUPPORTED,
             evidence={
+                "outcome": "multiple_distinct_calls_not_observed",
+                "attemptsCompleted": attempts_completed,
+                "maximumAttempts": self.max_attempts,
                 "requestedFunctionCount": 3,
-                "returnedFunctionCallCount": len(calls),
-                "distinctRequestedFunctionsObserved": len(set(observed_names) & expected_names),
-                "unexpectedFunctionCallCount": len(
-                    [name for name in observed_names if name not in expected_names]
-                ),
+                "returnedFunctionCallCount": max_returned,
+                "distinctRequestedFunctionsObserved": max_distinct_requested,
+                "unexpectedFunctionCallCount": max_unexpected,
             },
         )

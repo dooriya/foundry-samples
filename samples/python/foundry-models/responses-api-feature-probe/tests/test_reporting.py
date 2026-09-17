@@ -69,15 +69,32 @@ def test_runner_attaches_unknown_default_expectation_and_skipped_results() -> No
     ("status", "display"),
     [
         ("pass", "Supported"),
-        ("fail", "Failed validation"),
+        ("fail", "Not verified"),
         ("unsupported", "Unsupported"),
         ("not_applicable", "Not applicable"),
         ("skipped", "Not tested"),
-        ("inconclusive", "Inconclusive"),
+        ("inconclusive", "Not verified"),
     ],
 )
 def test_display_result_uses_capability_language(status: str, display: str) -> None:
     assert _display_result(status) == display
+
+
+def test_report_omits_result_meanings_that_did_not_occur(tmp_path: Path) -> None:
+    manifest = run_diagnostics(
+        context=ScenarioContext(client=SimpleNamespace(), model="deployment"),
+        target=target(),
+        scenarios=(PassingScenario(),),
+        expectations=ExpectationSet(),
+    )
+
+    _, markdown_path = write_reports(manifest, tmp_path)
+    markdown = markdown_path.read_text(encoding="utf-8")
+
+    assert "- **Supported**:" in markdown
+    assert "- **Unsupported**:" not in markdown
+    assert "- **Not verified**:" not in markdown
+    assert "- **Not tested**:" not in markdown
 
 
 def test_report_matches_schema_and_contains_no_sensitive_error(tmp_path: Path) -> None:
@@ -111,7 +128,7 @@ def test_report_matches_schema_and_contains_no_sensitive_error(tmp_path: Path) -
     markdown = markdown_path.read_text(encoding="utf-8")
     assert "| Capability | Result | Duration |" in markdown
     assert "| `basic_response` | Supported |" in markdown
-    assert "| `failure` | Failed validation |" in markdown
+    assert "| `failure` | Not verified |" in markdown
     assert "Expected | Match" not in markdown
     assert "- Expected result: **Supported**" in markdown
     assert "- Matches expectation: **yes**" in markdown
