@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -100,6 +101,60 @@ def test_load_config_prefers_process_environment_and_defaults_scope() -> None:
     assert config.model == "deployment"
     assert config.token_scope == "https://ai.azure.com/.default"
     assert calls == [["azd", "env", "get-value", "FOUNDRY_TOKEN_SCOPE", "--no-prompt"]]
+
+
+def test_load_config_reads_local_dotenv(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    dotenv_path = tmp_path / ".env"
+    dotenv_path.write_text(
+        "\n".join(
+            (
+                "FOUNDRY_PROJECT_ENDPOINT=https://dotenv.openai.azure.com/openai/v1",
+                "FOUNDRY_MODEL=dotenv-deployment",
+                "FOUNDRY_TOKEN_SCOPE=https://ai.azure.com/.default",
+            )
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    for name in ("FOUNDRY_PROJECT_ENDPOINT", "FOUNDRY_MODEL", "FOUNDRY_TOKEN_SCOPE"):
+        monkeypatch.delenv(name, raising=False)
+
+    def command_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+        raise AssertionError(f"azd should not be called: {command}")
+
+    config = load_config(command_runner=command_runner)
+
+    assert config.endpoint == "https://dotenv.openai.azure.com/openai/v1/"
+    assert config.model == "dotenv-deployment"
+
+
+def test_load_config_process_environment_overrides_dotenv(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / ".env").write_text(
+        "\n".join(
+            (
+                "FOUNDRY_PROJECT_ENDPOINT=https://dotenv.openai.azure.com",
+                "FOUNDRY_MODEL=dotenv-deployment",
+            )
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("FOUNDRY_PROJECT_ENDPOINT", "https://process.openai.azure.com")
+    monkeypatch.setenv("FOUNDRY_MODEL", "process-deployment")
+
+    def command_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(command, 1, stdout="", stderr="")
+
+    config = load_config(command_runner=command_runner)
+
+    assert config.endpoint == "https://process.openai.azure.com/openai/v1/"
+    assert config.model == "process-deployment"
 
 
 def test_load_config_reads_individual_azd_values() -> None:

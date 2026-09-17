@@ -1,4 +1,4 @@
-<!-- cspell:ignore jsonschema pytest ruff venv -->
+<!-- cspell:ignore dotenv jsonschema pytest ruff venv -->
 
 # Responses API Feature Probe
 
@@ -28,17 +28,30 @@ cd rapi-feature-probe
 `azd` uses the repository's `main` branch by default. While the repository is private,
 collaborators must have access and an authenticated Git client.
 
-Sign in and configure the existing endpoint and deployment name:
+Sign in to Azure:
 
 ```console
 azd auth login
+```
+
+Copy `.env.example` to `.env`, then replace the endpoint and deployment placeholders:
+
+```dotenv
+FOUNDRY_PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
+FOUNDRY_MODEL=<deployment-name>
+```
+
+Alternatively, store the same values in the azd environment:
+
+```console
 azd env new responses-feature-probe
 azd env set FOUNDRY_PROJECT_ENDPOINT "https://<resource>.services.ai.azure.com/api/projects/<project>"
 azd env set FOUNDRY_MODEL "<deployment-name>"
 ```
 
 An Azure OpenAI endpoint such as `https://<resource>.openai.azure.com/openai/v1` is also
-supported.
+supported. Configuration precedence is process environment, `.env`, then the selected azd
+environment.
 
 Install and run on Windows:
 

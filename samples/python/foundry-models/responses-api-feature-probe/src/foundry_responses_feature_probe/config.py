@@ -5,7 +5,10 @@ import os
 import subprocess
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
+
+from dotenv import load_dotenv
 
 from foundry_responses_feature_probe.redaction import sanitize_url
 
@@ -133,14 +136,18 @@ def load_config(
     request_timeout_seconds: float = 90.0,
     max_retries: int = 1,
 ) -> HarnessConfig:
-    """Resolve endpoint and model from process or selected azd environment values."""
+    """Resolve settings from the process, local .env, or selected azd environment."""
 
     if request_timeout_seconds <= 0:
         raise ConfigurationError("Request timeout must be greater than zero.")
     if max_retries < 0:
         raise ConfigurationError("Maximum retries must not be negative.")
 
-    values = os.environ if environ is None else environ
+    if environ is None:
+        load_dotenv(dotenv_path=Path.cwd() / ".env", override=False)
+        values = os.environ
+    else:
+        values = environ
     endpoint = values.get(ENDPOINT_ENV) or _read_azd_value(
         ENDPOINT_ENV, environment_name, command_runner
     )
@@ -156,8 +163,9 @@ def load_config(
     if missing:
         names = ", ".join(missing)
         raise ConfigurationError(
-            f"Missing required azd environment value(s): {names}. "
-            "Set them with 'azd env set <name> <value>'."
+            f"Missing required configuration value(s): {names}. "
+            "Set them in the process environment, .env, or with "
+            "'azd env set <name> <value>'."
         )
 
     assert endpoint is not None
