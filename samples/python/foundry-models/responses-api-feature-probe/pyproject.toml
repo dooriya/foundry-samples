@@ -1,0 +1,47 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+# cspell:ignore setuptools addopts pythonpath testpaths
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "foundry-responses-feature-probe"
+version = "0.1.0"
+description = "Observed feature probe for the Microsoft Foundry Responses API"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "azure-identity>=1.25.1,<2",
+  "jsonschema>=4.25.1,<5",
+  "openai==3.11.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4.2,<9",
+  "PyYAML>=6.0.3,<7",
+  "ruff>=0.14.0,<1",
+]
+
+[project.scripts]
+foundry-responses-feature-probe = "foundry_responses_feature_probe.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"foundry_responses_feature_probe.fixtures" = ["*.b64"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
