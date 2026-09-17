@@ -18,14 +18,15 @@ Prerequisites:
 - An existing Foundry or Azure OpenAI model deployment
 - An identity with permission to invoke that deployment
 
-Initialize the sample:
+Clone the repository, then initialize from the sample directory:
 
 ```console
-azd init --template https://github.com/dooriya/foundry-samples/tree/main/samples/python/foundry-models/responses-api-feature-probe responses-api-feature-probe
+git clone --depth 1 https://github.com/dooriya/foundry-samples.git
+azd init --template ./foundry-samples/samples/python/foundry-models/responses-api-feature-probe responses-api-feature-probe
 cd responses-api-feature-probe
 ```
 
-When testing an unmerged branch, replace `main` in the URL with the branch name.
+When testing an unmerged branch, add `--branch <branch-name>` to `git clone`.
 
 Sign in and configure the existing endpoint and deployment name:
 
