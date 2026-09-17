@@ -18,15 +18,12 @@ Prerequisites:
 - An existing Foundry or Azure OpenAI model deployment
 - An identity with permission to invoke that deployment
 
-Clone the repository, then initialize from the sample directory:
+Initialize the sample directly from its share branch:
 
 ```console
-git clone --depth 1 https://github.com/dooriya/foundry-samples.git
-azd init --template ./foundry-samples/samples/python/foundry-models/responses-api-feature-probe responses-api-feature-probe
-cd responses-api-feature-probe
+azd init --template https://github.com/dooriya/foundry-samples --branch rapi-feature-probe rapi-feature-probe
+cd rapi-feature-probe
 ```
-
-When testing an unmerged branch, add `--branch <branch-name>` to `git clone`.
 
 Sign in and configure the existing endpoint and deployment name:
 
@@ -89,15 +86,8 @@ Reports omit prompts, responses, tool arguments, tool outputs, and token values.
 redacts common credential forms and sensitive URL components, but reports remain operational data
 and should be reviewed before sharing. Automated tests are offline and make no network calls.
 
-## Maintainer tests
+## Source tests
 
-The `tests/` folder is not required to run the probe. It is retained for repository maintainers
-because its offline tests protect the request shapes, report schemas, credential redaction, and
-the 32x32 solid-black image invariant.
-
-```console
-python -m pip install ".[dev]"
-python -m ruff check .
-python -m ruff format --check .
-python -m pytest
-```
+The source repository retains offline tests for request shapes, report schemas, credential
+redaction, and the 32x32 solid-black image invariant. They are not required to run the probe and
+are excluded from projects created with `azd init`.

@@ -1,0 +1,3 @@
+# Keep repository-only validation files out of initialized projects.
+sample.yaml
+tests/
