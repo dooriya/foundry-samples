@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 from jsonschema import Draft202012Validator
 
 from foundry_responses_feature_probe.models import (
@@ -14,7 +15,7 @@ from foundry_responses_feature_probe.models import (
     Status,
     TargetMetadata,
 )
-from foundry_responses_feature_probe.reporting import write_reports
+from foundry_responses_feature_probe.reporting import _display_result, write_reports
 from foundry_responses_feature_probe.runner import run_diagnostics
 from foundry_responses_feature_probe.scenarios.base import ScenarioContext
 
@@ -64,6 +65,21 @@ def test_runner_attaches_unknown_default_expectation_and_skipped_results() -> No
     assert manifest.scenarios[1].observed == {"reason": "not_selected"}
 
 
+@pytest.mark.parametrize(
+    ("status", "display"),
+    [
+        ("pass", "Supported"),
+        ("fail", "Failed validation"),
+        ("unsupported", "Unsupported"),
+        ("not_applicable", "Not applicable"),
+        ("skipped", "Not tested"),
+        ("inconclusive", "Inconclusive"),
+    ],
+)
+def test_display_result_uses_capability_language(status: str, display: str) -> None:
+    assert _display_result(status) == display
+
+
 def test_report_matches_schema_and_contains_no_sensitive_error(tmp_path: Path) -> None:
     manifest = run_diagnostics(
         context=ScenarioContext(client=SimpleNamespace(), model="deployment"),
@@ -92,3 +108,11 @@ def test_report_matches_schema_and_contains_no_sensitive_error(tmp_path: Path) -
         assert secret not in combined
     assert "not an authoritative Microsoft feature-parity certification" in combined
     assert "`local@1` (local file)" in combined
+    markdown = markdown_path.read_text(encoding="utf-8")
+    assert "| Capability | Result | Duration |" in markdown
+    assert "| `basic_response` | Supported |" in markdown
+    assert "| `failure` | Failed validation |" in markdown
+    assert "Expected | Match" not in markdown
+    assert "- Expected result: **Supported**" in markdown
+    assert "- Matches expectation: **yes**" in markdown
+    assert "- Expected result: **unknown**" not in markdown

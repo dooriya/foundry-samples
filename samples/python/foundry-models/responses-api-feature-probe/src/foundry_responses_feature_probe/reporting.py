@@ -11,6 +11,19 @@ from foundry_responses_feature_probe.redaction import sanitize_value
 JSON_REPORT_NAME = "results.json"
 MARKDOWN_REPORT_NAME = "report.md"
 
+_RESULT_LABELS = {
+    "pass": "Supported",
+    "fail": "Failed validation",
+    "unsupported": "Unsupported",
+    "not_applicable": "Not applicable",
+    "skipped": "Not tested",
+    "inconclusive": "Inconclusive",
+}
+
+
+def _display_result(status: str) -> str:
+    return _RESULT_LABELS[status]
+
 
 def _markdown_report(document: dict[str, Any]) -> str:
     target = document["target"]
@@ -43,27 +56,52 @@ def _markdown_report(document: dict[str, Any]) -> str:
             "",
             "## Summary",
             "",
-            "| Capability | Status | Expected | Match | Duration |",
-            "|---|---|---|---|---:|",
+            "| Capability | Result | Duration |",
+            "|---|---|---:|",
         ]
     )
     for scenario in document["scenarios"]:
-        matched = scenario["expectationMatched"]
-        match_text = "unknown" if matched is None else ("yes" if matched else "no")
         lines.append(
-            f"| `{scenario['capabilityId']}` | {scenario['status']} | "
-            f"{scenario['expected']} | {match_text} | {scenario['durationMs']} ms |"
+            f"| `{scenario['capabilityId']}` | {_display_result(scenario['status'])} | "
+            f"{scenario['durationMs']} ms |"
         )
 
-    lines.extend(["", "## Observations", ""])
+    lines.extend(
+        [
+            "",
+            "## Result meanings",
+            "",
+            "- **Supported**: the request and capability-specific validation succeeded.",
+            "- **Unsupported**: the service explicitly rejected the capability as unsupported.",
+            "- **Failed validation**: the observed behavior did not satisfy the probe; this does "
+            "not by itself prove the capability is unsupported.",
+            "- **Inconclusive**: the available evidence could not prove support or failure.",
+            "- **Not tested**: the scenario was not selected for this run.",
+            "- **Not applicable**: the capability does not apply to the selected target.",
+            "",
+            "## Observations",
+            "",
+        ]
+    )
     for scenario in document["scenarios"]:
         lines.extend(
             [
                 f"### {scenario['name']}",
                 "",
                 f"- Capability ID: `{scenario['capabilityId']}`",
-                f"- Status: `{scenario['status']}`",
-                f"- Expected: `{scenario['expected']}`",
+                f"- Result: **{_display_result(scenario['status'])}**",
+            ]
+        )
+        if scenario["expected"] != "unknown":
+            matched = "yes" if scenario["expectationMatched"] else "no"
+            lines.extend(
+                [
+                    f"- Expected result: **{_display_result(scenario['expected'])}**",
+                    f"- Matches expectation: **{matched}**",
+                ]
+            )
+        lines.extend(
+            [
                 "- Evidence:",
                 "",
                 "```json",

@@ -91,6 +91,11 @@ vision input.
 Capability support depends on the deployment, model, region, and configuration. An
 `inconclusive` result is retained when the evidence cannot prove support or failure.
 
+The human-readable report uses **Supported**, **Unsupported**, **Failed validation**, and
+**Inconclusive**. A failed validation means the observed response did not satisfy that probe; it
+does not automatically mean the service explicitly rejected the capability. The JSON report keeps
+the versioned machine status contract for automation.
+
 ## Authentication and safety
 
 Local authentication uses `DefaultAzureCredential`; API-key authentication is not supported.
