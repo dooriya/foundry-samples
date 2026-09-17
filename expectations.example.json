@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0",
+  "source": {
+    "name": "local-example",
+    "version": "2026-09-17"
+  },
+  "expectations": {
+    "basic_response": {
+      "status": "unknown"
+    },
+    "streaming_response": {
+      "status": "unknown"
+    },
+    "single_tool_call": {
+      "status": "unknown"
+    },
+    "parallel_tool_calls": {
+      "status": "unknown"
+    },
+    "structured_output": {
+      "status": "unknown"
+    },
+    "reasoning_effort": {
+      "status": "unknown"
+    },
+    "prompt_cache_reporting": {
+      "status": "unknown"
+    },
+    "vision_input": {
+      "status": "unknown"
+    }
+  }
+}

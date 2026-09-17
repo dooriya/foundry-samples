@@ -1,0 +1,9 @@
+name: Responses API Feature Probe
+description: Offline-validated Python probe for observed Microsoft Foundry Responses API capabilities.
+
+build: >-
+  python -m pip install --disable-pip-version-check ".[dev]"
+validate: >-
+  python -m ruff check . &&
+  python -m ruff format --check .
+test: "python -m pytest -q"
