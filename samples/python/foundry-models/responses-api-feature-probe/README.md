@@ -18,12 +18,15 @@ Prerequisites:
 - An existing Foundry or Azure OpenAI model deployment
 - An identity with permission to invoke that deployment
 
-Initialize the sample directly from its share branch:
+Initialize the sample directly from its dedicated template repository:
 
 ```console
-azd init --template https://github.com/dooriya/foundry-samples --branch rapi-feature-probe rapi-feature-probe
+azd init --template https://github.com/dooriya/rapi-feature-probe-template rapi-feature-probe
 cd rapi-feature-probe
 ```
+
+`azd` uses the repository's `main` branch by default. While the repository is private,
+collaborators must have access and an authenticated Git client.
 
 Sign in and configure the existing endpoint and deployment name:
 
