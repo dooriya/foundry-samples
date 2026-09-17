@@ -44,7 +44,7 @@ Install and run on Windows:
 
 ```powershell
 py -3.11 -m venv .venv
-.\.venv\Scripts\python -m pip install ".[dev]"
+.\.venv\Scripts\python -m pip install .
 .\.venv\Scripts\python -m foundry_responses_feature_probe
 ```
 
@@ -52,7 +52,7 @@ Install and run on macOS or Linux:
 
 ```bash
 python3 -m venv .venv
-./.venv/bin/python -m pip install ".[dev]"
+./.venv/bin/python -m pip install .
 ./.venv/bin/python -m foundry_responses_feature_probe
 ```
 
@@ -89,9 +89,14 @@ Reports omit prompts, responses, tool arguments, tool outputs, and token values.
 redacts common credential forms and sensitive URL components, but reports remain operational data
 and should be reviewed before sharing. Automated tests are offline and make no network calls.
 
-## Offline validation
+## Maintainer tests
+
+The `tests/` folder is not required to run the probe. It is retained for repository maintainers
+because its offline tests protect the request shapes, report schemas, credential redaction, and
+the 32x32 solid-black image invariant.
 
 ```console
+python -m pip install ".[dev]"
 python -m ruff check .
 python -m ruff format --check .
 python -m pytest
